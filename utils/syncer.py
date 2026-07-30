@@ -53,8 +53,8 @@ async def sync_server_to_database(bot, args):
                 logger.info(debug)
 
         if adminroles is None or len(adminroles) == 0:
-            logger.warning(f"No admin role set for guild {guild.id}.")
-            logger.warning(f"If you're an admin, run Icy in a terminal with the --admin-role <GuildID>;<RoleID> to configure it, and specify your Role ID. Then, run Icy again without arguments")
+            #logger.warning(f"No admin role set for guild {guild.id}.")
+            #logger.warning(f"If you're an admin, run Icy in a terminal with the --admin-role <GuildID>;<RoleID> to configure it, and specify your Role ID. Then, run Icy again without arguments")
 
             logger.info(f"Synchronizing {guild} to the database...")
             

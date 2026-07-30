@@ -3,22 +3,32 @@ from discord.ext import commands
 from config.groups import prop
 from views.message import Message
 from utils.dbcommands import getschemaversion, db_showrank
+from utils.isadmin import isadmin
+from utils.variables import guild_cache
 
 class EnableRanks(commands.Cog):
+    prop = prop
+    
     def __init__(self, bot):
         self.bot = bot
 
-    @prop.command(name="enableranks", description="Pings something")
+    @prop.command(
+        name="rankstate", 
+        description="Enables or disables ranks"
+        )
+    @discord.default_permissions(administrator=True)
     async def enableranks(
         self, 
         ctx,
         value: bool = discord.Option(
+            bool,
             description = 'Specify "True" to enable ranks, "False" to disable them.',
             required=True
             )
         ):
         if not await isadmin(ctx.interaction.user):
-            embed = Message(bot, title="Error", text="You don't have permission to use this command.", messagetype="Error")
+            embed = Message(self.bot, title="Error", text="You don't have permission to use this command.", messagetype="Error")
+            await ctx.respond(view=embed, ephemeral=True)
             return
         
         if value:
@@ -32,11 +42,11 @@ class EnableRanks(commands.Cog):
             'VERSION_STRING': "1.1"
         }
 
-        schemaversion = await getschemaversion()
+        schemaversion = await getschemaversion(self.bot)
 
         try:
             if schemaversion['API_VERSION'] == required['API_VERSION'] and schemaversion['REVISION'] >= required['REVISION']:
-                async with bot.db.acquire() as conn:
+                async with self.bot.db.acquire() as conn:
                     if value:
                         await conn.execute(
                             'SELECT "Core".enablerank($1)',
@@ -68,7 +78,7 @@ class EnableRanks(commands.Cog):
                         
                         if idolrole is not None:
                             for member in idolrole.members:
-                                await member.add_roles(idolrole, reason="Disable ranks")
+                                await member.remove_roles(idolrole, reason="Disable ranks")
                         
                         for member in guild.members:
                             if not member.bot:
@@ -88,7 +98,7 @@ class EnableRanks(commands.Cog):
                                     rankrole = guild.get_role(rankrole_id)
 
                                     if rankrole and rankrole in member.roles:
-                                        await member.add_roles(rankrole)
+                                        await member.remove_roles(rankrole)
                         
                         await conn.execute(
                             'SELECT "Core".disablerank($1)',
@@ -97,11 +107,14 @@ class EnableRanks(commands.Cog):
                 
                 guild_cache[ctx.guild.id] = value
                 
-                embed = Message(bot, title="Enabled ranks", text=f"Successfully {verb}led ranks on this guild.", messagetype="Success")
+                embed = Message(self.bot, title=f"{verb[0].upper()}{verb[1:9]}led ranks", text=f"Successfully {verb}led ranks on this guild.", messagetype="Success")
             else:
-                embed = Message(bot, title="Incompatible Icy version", text=f"Your database is not compatible with this command. This command requires version {required['VERSION_STRING']} to function.", messagetype="Error")
+                embed = Message(self.bot, title="Incompatible Icy version", text=f"Your database is not compatible with this command. This command requires version {required['VERSION_STRING']} to function.", messagetype="Error")
         except Exception as e:
-            embed = Message(bot, title="An error occurred", subtitle=f"An error occurred while {verb}ing ranks for this guild.", text=f"{e}", messagetype="Error")
+            embed = Message(self.bot, title="An error occurred", subtitle=f"An error occurred while {verb}ing ranks for this guild.", text=f"{e}", messagetype="Error")
+
+        finally:
+            await ctx.respond(view=embed, ephemeral=True)
 
 def setup(bot):
     bot.add_cog(EnableRanks(bot))

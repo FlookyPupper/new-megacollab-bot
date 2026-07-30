@@ -4,9 +4,9 @@ class Message(discord.ui.DesignerView):
     def __init__(
         self,
         bot,
-        title: str = None,
+        title,
+        text,
         subtitle: str = None,
-        text: str = None,
         messagetype: str = "Error"
     ):
         super().__init__()  # required before add_item will work
@@ -27,19 +27,24 @@ class Message(discord.ui.DesignerView):
         else:
             raise TypeError
 
-        self.title =+ f" {title}"
+        self.title += f" {title}"
 
         self.text1 = discord.ui.TextDisplay(f"## {self.title}")
         self.text2 = discord.ui.TextDisplay(f"### {subtitle}")
         self.text3 = discord.ui.TextDisplay(text or "")
 
-        self.select = OptionSelect(options)
-
-        container = discord.ui.Container(
-            self.text1,
-            self.text2,
-            self.text3,
-            color=self.color,
-        )
+        if subtitle is not None:
+            container = discord.ui.Container(
+                self.text1,
+                self.text2,
+                self.text3,
+                color=self.color,
+            )
+        else:
+            container = discord.ui.Container(
+                self.text1,
+                self.text3,
+                color=self.color,
+            )
         
         self.add_item(container)
