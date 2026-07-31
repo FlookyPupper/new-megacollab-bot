@@ -38,6 +38,7 @@ async def db_droppart(
 
 async def db_createmegacollab(
     conn,
+    guild: discord.Guild,
     name: str, 
     songid: int, 
     durationindays: int, 
@@ -48,8 +49,8 @@ async def db_createmegacollab(
     acknowledgeduplication: Optional[bool]=False,
 ):
     collabid = await conn.fetchval(
-        'SELECT "Core".createmegacollab($1, $2, $3, $4, $5, $6, $7, $8)', 
-        name, songid, durationindays, difficultyid, maxgroups, seasontokensrequired, customstartdate, acknowledgeduplication
+        'SELECT "Core".createmegacollab($1, $2, $3, $4, $5, $6, $7, $8, $9)', 
+        name, guild.id, songid, durationindays, difficultyid, maxgroups, seasontokensrequired, customstartdate, acknowledgeduplication
     )
             
     return collabid
@@ -654,3 +655,146 @@ async def getschemaversion(bot) -> dict:
     }
     
     return schemaversion
+
+async def db_showsong(bot, bysongid=None, byartistid=None, byname=None):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * from "Core".showsong($1, $2, $3)', 
+            bysongid, byartistid, byname
+        )
+    
+    return info
+
+async def db_doesartistexist(bot, artistid: int):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetchval(
+            'SELECT "Core".doesartistexist($1)', 
+            artistid
+        )
+
+    return info
+
+# e
+
+
+async def db_checkduplicates(bot, name: str, table: str):
+    async with bot.db.acquire() as conn:
+        match table:
+            case 'megacollabs':
+                info = await conn.fetch(
+                    '''
+                    SELECT id AS collabid, 
+                           name AS collabname, 
+                           normalizedname AS normalizedname,
+                           extraid as songid
+                    FROM "Core".checkduplicates($1, $2)
+                    ''', 
+                    name, table
+                )
+            case 'songs':
+                info = await conn.fetch(
+                    '''
+                    SELECT id AS songid, 
+                           name AS songname, 
+                           normalizedname AS normalizedname 
+                    FROM "Core".checkduplicates($1, $2)
+                    ''', 
+                    name, table
+                )
+            case 'artists':
+                info = await conn.fetch(
+                    '''
+                    SELECT id AS artistid, 
+                           name AS artistname, 
+                           normalizedname AS normalizedname 
+                    FROM "Core".checkduplicates($1, $2)
+                    ''', 
+                    name, table
+                )
+            case _:
+                raise ValueError("Invalid table")
+
+    return info
+
+async def db_showparts(bot, collabid: int):
+    collabid = int(collabid)
+
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * from "Core".showparts($1)', 
+            collabid
+        )
+    
+    return info
+
+async def db_showclaims(bot, bycollabid: Optional[int]=None, bypartid: Optional[int]=None, byuserid: Optional[int]=None):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * from "Core".showclaims($1, $2, $3)', 
+            bycollabid, bypartid, byuserid
+        )
+    
+    return info
+
+async def db_showuserclaims(
+    bot,
+    bycollabid: Optional[int]=None, 
+    bypartid: Optional[int]=None, 
+    byuserid: Optional[int]=None, 
+    byclaimid: Optional[int]=None, 
+    bystatus=None, 
+    bytype=None
+):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * from "Core".showuserclaims($1, $2, $3, $4, $5, $6)', 
+            bycollabid, bypartid, byuserid, byclaimid, bystatus, bytype
+        )
+    
+    return info
+
+async def db_setranknotificationchannel(bot, channel: discord.TextChannel):
+    async with bot.db.acquire() as conn:
+        await conn.execute(
+            'SELECT * from "Core".setranknotificationchannel($1, $2)', 
+            channel.guild.id, channel.id
+        )
+
+async def db_associaterolewithrank(bot, rank: str, role: discord.Role):
+    async with bot.db.acquire() as conn:
+        await conn.execute(
+            'SELECT * from "Core".associaterolewithrank($1, $2, $3)', 
+            rank, role.guild.id, role.id
+        )
+
+async def db_setidolrole(bot, role: discord.Role):
+    async with bot.db.acquire() as conn:
+        await conn.execute(
+            'SELECT * from "Core".setidolrole($1, $2)', 
+            role.guild.id, role.id
+        )
+
+async def db_setjudgerole(bot, role: discord.Role):
+    async with bot.db.acquire() as conn:
+        await conn.execute(
+            'SELECT * from "Core".setjudgerole($1, $2)', 
+            role.guild.id, role.id
+        )
+
+async def db_showcollabidbymessage(bot, channelid: int, messageid: int):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetchval(
+            'SELECT * from "Core".showcollabidfrommessage($1, $2)', 
+            channelid, messageid
+        )
+    
+    return info
+
+async def db_showartists(bot, byartistid: int=None, byartistname: str=None, bylistofartists: list=None):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * from "Core".showartists($1, $2, $3)', 
+            byartistid, byartistname, bylistofartists
+        )
+        
+    return info

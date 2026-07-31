@@ -37,9 +37,9 @@ class EnableRanks(commands.Cog):
             verb = "disab"
 
         required = {
-            'API_VERSION': 1,
-            'REVISION': 2,
-            'VERSION_STRING': "1.1"
+            'API_VERSION': 2,
+            'REVISION': 1,
+            'VERSION_STRING': "2.0"
         }
 
         schemaversion = await getschemaversion(self.bot)
