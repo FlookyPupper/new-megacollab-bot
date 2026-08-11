@@ -1,5 +1,6 @@
 import asyncpg
 import discord
+from utils.parseintodict import parseintodict
 
 async def db_associatehostwithcollab(
     conn,
@@ -105,11 +106,12 @@ async def db_addsonglink(
 async def db_createsong(
     conn,
     name: str, 
+    guild: discord.Guild,
     acknowledgeduplication: Optional[bool]=False,
 ):
     songid = await conn.fetchval(
-        'SELECT "Core".createsong($1, $2)', 
-        name, acknowledgeduplication
+        'SELECT "Core".createsong($1, $2, $3)', 
+        name, guild.id, acknowledgeduplication
     )
             
     return songid
@@ -117,11 +119,12 @@ async def db_createsong(
 async def db_createartist(
     conn,
     name: str, 
+    guild: discord.Guild,
     acknowledgeduplication: Optional[bool]=False,
 ):
     artistid = await conn.fetchval(
-        'SELECT "Core".createartist($1, $2)', 
-        name, acknowledgeduplication
+        'SELECT "Core".createartist($1, $2, $3)', 
+        name, guild.id, acknowledgeduplication
     )
             
     return artistid
@@ -368,8 +371,8 @@ async def db_showcollabs(bot, bycollabid: int=None, bycollabname: str=None):
         
     return info
 
-async def db_showartistname(artistid: int):
-    query = await db_showartists(artistid)
+async def db_showartistname(bot, guild, artistid: int):
+    query = await db_showartists(bot, guild, artistid)
     query = await parseintodict(query)
     return query[0]['artistname']
 
@@ -656,11 +659,11 @@ async def getschemaversion(bot) -> dict:
     
     return schemaversion
 
-async def db_showsong(bot, bysongid=None, byartistid=None, byname=None):
+async def db_showsong(bot, guild, bysongid=None, byartistid=None, byname=None):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showsong($1, $2, $3)', 
-            bysongid, byartistid, byname
+            'SELECT * from "Core".showsong($1, $2, $3, $4)', 
+            guild.id, bysongid, byartistid, byname
         )
     
     return info
@@ -677,7 +680,7 @@ async def db_doesartistexist(bot, artistid: int):
 # e
 
 
-async def db_checkduplicates(bot, name: str, table: str):
+async def db_checkduplicates(bot, guild: discord.Guild, name: str, table: str):
     async with bot.db.acquire() as conn:
         match table:
             case 'megacollabs':
@@ -687,9 +690,9 @@ async def db_checkduplicates(bot, name: str, table: str):
                            name AS collabname, 
                            normalizedname AS normalizedname,
                            extraid as songid
-                    FROM "Core".checkduplicates($1, $2)
+                    FROM "Core".checkduplicates($1, $2, $3)
                     ''', 
-                    name, table
+                    guild.id, name, table
                 )
             case 'songs':
                 info = await conn.fetch(
@@ -697,9 +700,9 @@ async def db_checkduplicates(bot, name: str, table: str):
                     SELECT id AS songid, 
                            name AS songname, 
                            normalizedname AS normalizedname 
-                    FROM "Core".checkduplicates($1, $2)
+                    FROM "Core".checkduplicates($1, $2, $3)
                     ''', 
-                    name, table
+                    guild.id, name, table
                 )
             case 'artists':
                 info = await conn.fetch(
@@ -707,9 +710,9 @@ async def db_checkduplicates(bot, name: str, table: str):
                     SELECT id AS artistid, 
                            name AS artistname, 
                            normalizedname AS normalizedname 
-                    FROM "Core".checkduplicates($1, $2)
+                    FROM "Core".checkduplicates($1, $2, $3)
                     ''', 
-                    name, table
+                    guild.id, name, table
                 )
             case _:
                 raise ValueError("Invalid table")
@@ -790,11 +793,11 @@ async def db_showcollabidbymessage(bot, channelid: int, messageid: int):
     
     return info
 
-async def db_showartists(bot, byartistid: int=None, byartistname: str=None, bylistofartists: list=None):
+async def db_showartists(bot, guild: discord.Guild, byartistid: int=None, byartistname: str=None, bylistofartists: list=None):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showartists($1, $2, $3)', 
-            byartistid, byartistname, bylistofartists
+            'SELECT * from "Core".showartists($1, $2, $3, $4)', 
+            guild.id, byartistid, byartistname, bylistofartists
         )
         
     return info

@@ -7,14 +7,19 @@ from urllib.parse import urlparse, parse_qs
 from utils.isadmin import isadmin
 from utils.dbcommands import (
     db_showartists,
+    db_createsong,
+    db_associatesongwithartist,
     db_doesartistexist,
     db_checkduplicates,
     db_showartistname,
+    db_createartist,
+    db_addsonglink,
     showfriendlyartistnames
 )
 from config.groups import (
     song,
     SONG_TMP,
+    SONG_DIR,
     MP3_MAXSIZE,
     BITRATES
 )
@@ -23,6 +28,7 @@ from views.selectlist import SelectList
 from views.confirmdeny import ConfirmDeny
 from views.message import Message
 from utils.concatenateartists import concatenateartists
+from utils.parseintodict import parseintodict
 
 class AddSong(commands.Cog):
     song = song
@@ -80,6 +86,8 @@ class AddSong(commands.Cog):
             return
 
         try:
+            temp_file = None
+            final_file = None
         
             await ctx.response.defer(ephemeral=True)
 
@@ -101,7 +109,8 @@ class AddSong(commands.Cog):
             else:
                 artist_list = [artist]
 
-            inbetweener = await db_showartists(self.bot)
+            inbetweener = await db_showartists(self.bot, ctx.interaction.guild)
+            print(inbetweener)
 
             autocomplete_artistlist = await showfriendlyartistnames(inbetweener)
 
@@ -168,6 +177,7 @@ class AddSong(commands.Cog):
             print(links['youtube'])
 
             toparse['file'] = file_path
+            temp_file = toparse["file"]
 
             # YouTube
 
@@ -270,7 +280,7 @@ class AddSong(commands.Cog):
 
             for artist in toparse['artist']:
                 if isinstance(artist, str):
-                    foundduplicates = await db_checkduplicates(self.bot, artist, 'artists')
+                    foundduplicates = await db_checkduplicates(self.bot, ctx.interaction.guild, artist, 'artists')
                     if len(foundduplicates) != 0:
                         duplicates.append(foundduplicates)
                         ofduplicate.append(artist)
@@ -312,7 +322,7 @@ class AddSong(commands.Cog):
                         bot=self.bot,
                         options=options,
                         title="Potential duplicate",
-                        subtitle=f'Artists matching "{aux_dict["matchedname"]}"',
+                        subtitle=f'Artists matching "{matched_name}"',
                         text="Choose an existing artist or create a new one.",
                         isdisambiguation=True,
                     )
@@ -360,7 +370,7 @@ class AddSong(commands.Cog):
         
             for artist in toparse['artist']:
                 if isinstance(artist, int):
-                    toparse['artistdisplay'].append(f"{await db_showartistname(int(artist))}")
+                    toparse['artistdisplay'].append(f"{await db_showartistname(self.bot, ctx.interaction.guild, int(artist))}")
                 else:
                     toparse['artistdisplay'].append(f"{artist} *(new)*")
 
@@ -392,23 +402,77 @@ class AddSong(commands.Cog):
             )
 
             await view.wait()
-                
+        
+            if view.choice or not view.choice:
+                if not await isadmin(ctx.user):
+                    embed = Message(self.bot, title="Error", text="You do not have permission to run this command", messagetype="Error")
+                    return
+
             if not view.choice:
                 embed = Message(self.bot, title="Cancelled", text="Action cancelled.", messagetype="Error")
-                
+
             elif view.choice:
-                embed = Message(self.bot, title="A thing happened", text=f"Did the thing", messagetype="Success")
-            
-            await ctx.edit(
-                view=embed
-            )
+                embed = Message(self.bot, title="Hold on, working now!", text=f"Creating song {toparse['name']}...", messagetype="Wait")
+                await ctx.edit(
+                    view=embed
+                )
+
+                newsong = None
+
+                final_file = None
+
+                newartists = []
+
+
+                async with self.bot.db.acquire() as conn:
+                    async with conn.transaction():
+                        for artist in toparse['artist']:
+                            if isinstance(artist, str):
+                                newartists.append(await db_createartist(conn, artist, ctx.interaction.guild, acknowledgeartistduplication))
+                            elif isinstance(artist, int):
+                                newartists.append(artist)
+                            
+                        newsong = await db_createsong(conn, toparse['name'], ctx.interaction.guild, acknowledgeartistduplication)
+
+                        for artist in newartists:
+                            await db_associatesongwithartist(conn, newsong, artist)
+                    
+                        if toparse['youtubeid'] is not None:
+                            await db_addsonglink(conn, newsong, 'YouTube', toparse['youtubeid'])
+
+                        if toparse['newgroundsid'] is not None:
+                            await db_addsonglink(conn, newsong, 'Newgrounds', toparse['newgroundsid'])
+
+                        if toparse['soundcloudtrack'] is not None and toparse['soundcloudusername'] is not None:
+                            await db_addsonglink(conn, newsong, 'SoundCloud', toparse['soundcloudtrack'], toparse['soundcloudusername'])
+
+                        if toparse['bandcamptrack'] is not None and toparse['bandcampusername'] is not None:
+                            await db_addsonglink(conn, newsong, 'Bandcamp', toparse['bandcamptrack'], toparse['bandcampusername'])
+                    
+
+                        if temp_file is not None:
+                            if temp_file.exists():
+                                final_file = SONG_DIR / temp_file.name
+                                temp_file.rename(final_file)
+
+                                await db_addsonglink(conn, newsong, 'Local', str(final_file))
+                            else:
+                                raise FileNotFoundError(f"{temp_file} not found")
+                        
+                embed = Message(self.bot, title="Success", text=f"Successfully created song {toparse['name']}!", messagetype="Success")
 
         except Exception as e:
+            if final_file is not None and final_file.exists():
+                final_file.unlink(missing_ok=True)
+            if temp_file is not None and temp_file.exists():
+                temp_file.unlink(missing_ok=True)
             embed = Message(self.bot, title="An error occurred", subtitle=f"An error occurred while adding this song.", text=f"{e}", messagetype="Error")
+            raise Exception(e)
+        
+        finally:
             await ctx.edit(
                 view=embed
             )  
-            raise Exception(e)
 
 def setup(bot):
     bot.add_cog(AddSong(bot))

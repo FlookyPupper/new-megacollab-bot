@@ -1,3 +1,4 @@
+import asyncpg
 import pandas as pd
 
 async def parseintodict(insert: Union[pd.DataFrame, list]) -> list[dict]:

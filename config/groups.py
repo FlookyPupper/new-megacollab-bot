@@ -1,5 +1,6 @@
 import discord
 from pathlib import Path
+from dotenv import load_dotenv
 
 prop = discord.SlashCommandGroup(
     "prop", 
@@ -19,7 +20,7 @@ song = discord.SlashCommandGroup(
     default_member_permissions=discord.Permissions(administrator=True)
 )
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 ENV_FILE = BASE_DIR / ".env"
 
