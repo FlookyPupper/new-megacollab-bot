@@ -109,6 +109,12 @@ class AddSong(commands.Cog):
             else:
                 artist_list = [artist]
 
+            if songupload is None and newgroundslink is None:
+                raise Exception("You need to specify a file for this NONG.")
+            elif songupload is not None and newgroundslink is not None:
+                raise Exception("For a Newgrounds song, it is invalid to specify a file upload.")
+
+
             inbetweener = await db_showartists(self.bot, ctx.interaction.guild)
             print(inbetweener)
 
@@ -313,7 +319,7 @@ class AddSong(commands.Cog):
                         ),
                         discord.SelectOption(
                             label="Cancel",
-                            value="cancel",
+                            value="cancel_operation",
                             description="Cancel this operation.",
                         ),
                     ])                
@@ -336,8 +342,13 @@ class AddSong(commands.Cog):
 
                     choice = view.choice
 
-                    if choice is None or choice == "cancel":
+                    if choice is None or choice == "cancel_operation":
                         toparse["artist"] = None
+                        embed = Message(self.bot, title="Cancelled", text="Action cancelled.", messagetype="Error")
+                        await ctx.edit(
+                            view=embed
+                        )
+                        await ctx.stop()
                         break
 
                     if choice == "create":
