@@ -5,18 +5,18 @@ from views.message import Message
 from utils.dbcommands import getschemaversion, db_showrank
 from utils.isadmin import isadmin
 from utils.variables import guild_cache
+from pycord.multicog import subcommand
 
 class EnableRanks(commands.Cog):
-    prop = prop
-    
     def __init__(self, bot):
         self.bot = bot
 
-    @prop.command(
+    @subcommand("prop", independent=True)
+    @discord.slash_command(
         name="rankstate", 
         description="Enables or disables ranks"
         )
-    @discord.default_permissions(administrator=True)
+    @discord.default_permissions(manage_guild=True)
     async def enableranks(
         self, 
         ctx,

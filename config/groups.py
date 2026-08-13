@@ -5,19 +5,19 @@ from dotenv import load_dotenv
 prop = discord.SlashCommandGroup(
     "prop", 
     "Settings related commands",
-    default_member_permissions=discord.Permissions(administrator=True)
+    default_member_permissions=discord.Permissions(manage_guild=True)
 )
 
 megacollab = discord.SlashCommandGroup(
     "megacollab", 
     "Megacollab related commands",
-    default_member_permissions=discord.Permissions(administrator=True)
+    default_member_permissions=discord.Permissions(manage_guild=True)
 )
 
 song = discord.SlashCommandGroup(
     "song", 
     "Song related commands",
-    default_member_permissions=discord.Permissions(administrator=True)
+    default_member_permissions=discord.Permissions(manage_guild=True)
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent

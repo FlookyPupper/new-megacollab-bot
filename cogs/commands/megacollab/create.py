@@ -10,18 +10,20 @@ import discord
 import pandas as pd
 from autocomplete.songs import song_autocomplete
 from typing import Optional
+from config.groups import CSV_MAXSIZE
+from utils.parseintodict import parseintodict
+from pycord.multicog import subcommand
 
-class CreateMegacollab(commands.Cog):
-    megacollab = megacollab
-    
+class CreateMegacollab(commands.Cog):   
     def __init__(self, bot):
         self.bot = bot
-        
-    @megacollab.command(
+    
+    @subcommand("megacollab", independent=True)
+    @discord.command(
         name='create', 
         description="Creates a new megacollab."
     )
-    @discord.default_permissions(administrator=True)
+    @discord.default_permissions(manage_guild=True)
     async def createmegacollab(
         ctx, 
         name: str = discord.Option(
@@ -59,10 +61,6 @@ class CreateMegacollab(commands.Cog):
             max_value=10000,
             default=500,
             required=False
-        ),
-        host: Optional[discord.User] = discord.Option(
-            description="(Optional) Host to assign to this collab. By default, it is set to the one who ran the command.",
-            required=False
         )
     ):
         logging.info(difficulty)
@@ -72,11 +70,9 @@ class CreateMegacollab(commands.Cog):
                 embed=embed,
                 ephemeral=True
             )
+            return
 
-        else:
-            if host is None:
-                host = ctx.interaction.user
-    
+        else:    
             duplicates = await db_checkduplicates(name, 'megacollabs')
 
             if parts is not None:
@@ -176,59 +172,37 @@ class CreateMegacollab(commands.Cog):
             deadline = datetime.now() + timedelta(days=durationindays)
             unix_timestamp = int(deadline.timestamp())
 
-
-
-            """
-
-            initialembed = discord.Embed(title="Megacollab Preview", color=0x00ff00)
-            initialembed.add_field(name="You're about to create the following megacollab:", value="", inline=False)
-            initialembed.add_field(name="Name", value=name, inline=False)
-            initialembed.add_field(name="Deadline", value=f"<t:{unix_timestamp}:F> (<t:{unix_timestamp}:R>)", inline=False)
-            initialembed.add_field(name="Song", value=friendlyname.name, inline=False)   
-            initialembed.add_field(name="Host", value=f"{host.mention}\n*(you can add other hosts later)*", inline=False)
-
-            if parts_dict is not None and isinstance(parts_dict, list) and len(parts_dict) > 0:
-                total_duration = parts_dict[-1]['offsetendseconds'] - parts_dict[0]['offsetstartseconds']
-                initialembed.add_field(name="Parts", value=f"Loaded {len(parts_dict)} parts, totaling {await parse_seconds_to_time(total_duration)}", inline=False)     
-
-            initialembed.set_footer(text="Review your changes before proceeding, because you won't be able to change them later.")
-
-            view = ConfirmMegacollabCreation(
-                        authorid=ctx.interaction.user.id, 
-                        collabname=name, 
-                        songid=song, 
-                        durationindays=durationindays,
-                        difficultyid=difficulty,
-                        maxgroups=maxgroups,
-                        parts=parts_dict,
-                        initialembed=initialembed,
-                        host=host
-                    )
-        
-            duplicateview = ConfirmDuplication()
-
-            text = ""
+            text = "\n".join([
+                f"**Name**: {name}",
+                f"**Deadline**: <t:{unix_timestamp}:F> (<t:{unix_timestamp}:R>)",
+                f"**Song**: {friendlyname.name}",
+                f"**Host**: {ctx.interaction.user.mention}",
+                "-# You can add other hosts later",
+            ])
             
-            """
+            view = ConfirmDeny(
+                self.bot,
+                title="You're about to create the following megacollab",
+                subittle="Review your changes before proceeding.",
+                text=text
+            )
 
             if len(duplicates) != 0:
                 duplicate_dict = await parseintodict(duplicates)
-                duplicateembed = discord.Embed(title=f'⚠️ There are potential duplicates that are like "{name}"', color=0xffff00)
-                for row in duplicate_dict:
-                    text = f'{text}\n**ID: {row["collabid"]}** - {row["collabname"]}'
-            
-                duplicateembed.add_field(name="Possible duplicates", value=text, inline=False)
-                duplicateembed.add_field(name="", value="**Are you sure you want to continue?**\n*(Another collab with the same name will be created)*")
+                text = "\n".join(
+                    f'**ID: {row["collabid"]}** - {row["collabname"]}'
+                    for row in duplicate_dict
+                )
 
-                duplicateview.previousview = view
-
+                duplicateview = ConfirmDeny(
+                    title=f'⚠️ There are potential duplicates that are like "{name}"',
+                    subtitle="Are you sure you want to continue? *(Another collab with the same name will be created)*",
+                    text=text
+                )
             else:
-                duplicate_dict = None
-                duplicateembed = None
                 duplicateview = None
 
             await ctx.respond(
-                    embed=duplicateembed if duplicateembed else initialembed,
                     view=duplicateview if duplicateview else view,
                     ephemeral=True
                 )

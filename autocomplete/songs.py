@@ -1,15 +1,15 @@
 import discord
-from utils.dbcommands import db_showsong
-from utils.dbcommands import showfriendlysongnames
+from utils.dbcommands import db_showsong, showfriendlysongnames
+from utils.isadmin import isadmin
 
 
 async def song_autocomplete(ctx: discord.AutocompleteContext):
-    if not bot.isBotSynced or not await isadmin(ctx.interaction.user): 
-        await ctx.response.send_autocomplete({})
-        return
+    bot = ctx.bot
 
-    songs = await db_showsong()
+    if not await isadmin(ctx.interaction.user):
+        return []
 
-    list_of_songs = await showfriendlysongnames(songs)
+    songs = await db_showsong(bot, ctx.interaction.guild)
+    friendly_songs = await showfriendlysongnames(songs)
 
-    return list_of_songs
+    return friendly_songs

@@ -29,6 +29,7 @@ from views.confirmdeny import ConfirmDeny
 from views.message import Message
 from utils.concatenateartists import concatenateartists
 from utils.parseintodict import parseintodict
+from autocomplete.artists import artist_autocomplete
 
 class AddSong(commands.Cog):
     song = song
@@ -52,6 +53,7 @@ class AddSong(commands.Cog):
         artist: str = discord.Option(
             str,
             description="Name of the artist. (Use ; to separate multiple artists)",
+            autocomplete=discord.utils.basic_autocomplete(artist_autocomplete),
             required=True
         ),
         youtubelink: str = discord.Option(
@@ -72,6 +74,11 @@ class AddSong(commands.Cog):
         soundcloudlink: str = discord.Option(
             str,
             description="The user that the claim will be attached to",
+            required=False
+        ),
+        replacementid: int = discord.Option(
+            int,
+            description="If your song is a NONG, this option is required.",
             required=False
         ),
         songupload: discord.Attachment = discord.Option(
@@ -101,7 +108,8 @@ class AddSong(commands.Cog):
                 'bandcamptrack': None,
                 'soundcloudusername': None,
                 'soundcloudtrack': None,
-                'file': None
+                'file': None,
+                'replacementid': int(replacementid) if replacementid else None
             }
 
             if ";" in artist:
@@ -109,10 +117,15 @@ class AddSong(commands.Cog):
             else:
                 artist_list = [artist]
 
-            if songupload is None and newgroundslink is None:
-                raise Exception("You need to specify a file for this NONG.")
-            elif songupload is not None and newgroundslink is not None:
-                raise Exception("For a Newgrounds song, it is invalid to specify a file upload.")
+            if songupload is not None:
+                if replacementid is None:
+                    raise Exception("You need to specify a replacement ID for this NONG.")
+            
+                if newgroundslink is not None:
+                    raise Exception("For a Newgrounds song, it is invalid to specify a file upload.")
+            elif songupload is None:
+                if newgroundslink is None:
+                    raise Exception("You need to specify a song file for this NONG.")
 
 
             inbetweener = await db_showartists(self.bot, ctx.interaction.guild)
@@ -466,7 +479,7 @@ class AddSong(commands.Cog):
                                 final_file = SONG_DIR / temp_file.name
                                 temp_file.rename(final_file)
 
-                                await db_addsonglink(conn, newsong, 'Local', str(final_file))
+                                await db_addsonglink(conn, newsong, 'Local', str(final_file), replacementidtoadd=toparse['replacementid'])
                             else:
                                 raise FileNotFoundError(f"{temp_file} not found")
                         

@@ -95,11 +95,12 @@ async def db_addsonglink(
     songid: int, 
     platformofchoice: str, 
     idoraddresstoadd: str, 
-    idusertoadd: str=None
+    idusertoadd: str=None,
+    replacementidtoadd: int=None
 ):
     await conn.execute(
-        'CALL "Core".addsonglink($1, $2, $3, $4)', 
-        songid, platformofchoice, idoraddresstoadd, idusertoadd
+        'SELECT "Core".addsonglink($1, $2, $3, $4, $5)', 
+        songid, platformofchoice, idoraddresstoadd, replacementidtoadd, idusertoadd
         )
 
 
@@ -619,7 +620,8 @@ async def showfriendlyartistnames(collabs: list) -> dict:
     list_of_artists = []
 
     for row in collabs:
-        label = f"{row['artistname']} (ID: {row['artistid']})"
+        #label = f"{row['artistname']} (ID: {row['artistid']})"
+        label = f"{row['artistname']}"
 
         #list_of_artists[label] = str(row['artistid'])
         list_of_artists.append(

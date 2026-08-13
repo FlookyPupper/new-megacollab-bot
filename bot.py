@@ -1,10 +1,11 @@
 import discord
+from pycord.multicog import Bot
 from discord.ext import commands
 from utils.icylogger import logger
 from utils.dbconnector import create_pool
 from utils.syncer import sync_server_to_database
 
-class MyBot(commands.Bot):
+class MyBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pool = None
@@ -18,6 +19,7 @@ class MyBot(commands.Bot):
         await super().close()
         logger.info("I'm coming home now...")
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True
-bot = MyBot(command_prefix="!")
+intents.members = True
+bot = MyBot(command_prefix="!", intents=intents)

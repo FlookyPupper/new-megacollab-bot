@@ -2,7 +2,7 @@ import discord
 
 async def isadmin(user):
     if isinstance(user, (discord.Member, discord.User)):
-        if user.guild_permissions.administrator:
+        if user.guild_permissions.manage_guild:
             return True
         else:
             return False

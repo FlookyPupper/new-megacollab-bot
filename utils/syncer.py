@@ -65,10 +65,9 @@ async def sync_server_to_database(bot, args):
 
         logger.info(f'Synchronizing members from "{guild}" to the database... This might take a while.')
         for member in guild.members:
-            print(member)
             if not member.bot: 
                 try:
-                    member_roles = set(await showmemberroles(asdiscordobjects=True))
+                    member_roles = set(await showmemberroles(bot, asdiscordobjects=True))
 
                     if set(member.roles) & member_roles:
                         await addtodatabase(bot, member, member.guild)
