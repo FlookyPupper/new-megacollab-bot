@@ -1,5 +1,6 @@
 import asyncpg
 import pandas as pd
+from utils.timeparser import parse_time_to_seconds, parse_seconds_to_time
 
 async def parseintodict(insert: Union[pd.DataFrame, list]) -> list[dict]:
     count_partnumber = 1

@@ -11,7 +11,7 @@ class EnableRanks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @subcommand("prop", independent=True)
+    @subcommand("prop")
     @discord.slash_command(
         name="rankstate", 
         description="Enables or disables ranks"

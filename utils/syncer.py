@@ -63,13 +63,27 @@ async def sync_server_to_database(bot, args):
         if not rankroles_dict and isrankenabled:
             logger.warning("There are no rank roles set. An admin must manually set each role to be given for each rank with /prop rankrole.\nOnce you have done it, please restart the bot.")
 
+        temp_guildid = None
+
         logger.info(f'Synchronizing members from "{guild}" to the database... This might take a while.')
         for member in guild.members:
             if not member.bot: 
                 try:
-                    member_roles = set(await showmemberroles(bot, asdiscordobjects=True))
+                    if temp_guildid is None or temp_guildid != member.guild.id:
+                        async with bot.db.acquire() as conn:
+                            verificationenabled = await conn.fetchval(
+                                'select verificationenabled from "Discord".guilds where guildid = $1',
+                                member.guild.id
+                            )
+                        temp_guildid = member.guild.id
 
-                    if set(member.roles) & member_roles:
+                        if verificationenabled:
+                            member_roles = set(await showmemberroles(bot, asdiscordobjects=True))
+
+                    if verificationenabled:
+                        if set(member.roles) & member_roles:
+                            await addtodatabase(bot, member, member.guild)
+                    else:
                         await addtodatabase(bot, member, member.guild)
 
                     async with bot.db.acquire() as conn:

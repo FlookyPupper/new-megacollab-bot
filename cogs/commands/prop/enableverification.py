@@ -5,22 +5,22 @@ from views.message import Message
 from utils.isadmin import isadmin
 from pycord.multicog import subcommand
 
-class SetMemberRole(commands.Cog):   
+class SetServerVerification(commands.Cog):   
     def __init__(self, bot):
         self.bot = bot
 
     @subcommand("prop", independent=True)
     @discord.slash_command(
-        name="memberrole", 
+        name="setserververification", 
         description="Sets the role to identify a member in this guild."
         )
     @discord.default_permissions(manage_guild=True)
     async def setmemberrolecmd(
         self,
         ctx,
-        role: discord.Role = discord.Option(
-            discord.Role,
-            description="Role to use to identify members in this guild.",
+        value: bool = discord.Option(
+            bool,
+            description = 'Specify "True" to require verification, "False" to disable it.',
             required=True
         )
     ):
@@ -32,15 +32,15 @@ class SetMemberRole(commands.Cog):
         try:
             async with self.bot.db.acquire() as conn:
                 await conn.execute(
-                    'SELECT "Core".setmemberroles($1, $2)',
-                    role.guild.id, role.id
+                    'SELECT "Core".setserververification($1, $2)',
+                    ctx.interaction.guild.id, value
                 )
 
-            embed = Message(self.bot, title="Success", text=f"Successfully set @{role.name} as the member role.", messagetype="Success")
+            embed = Message(self.bot, title="Success", text=f"Successfully set this server verification to {value}.", messagetype="Success")
         except Exception as e:
-            embed = Message(self.bot, title="Error", text=f"An error occurred while setting @{role.name} as the member role: {e}", messagetype="Error")
+            embed = Message(self.bot, title="Error", subtitle=f"An error occurred while setting server verification to {value}", text=f"{e}", messagetype="Error")
         finally:
             await ctx.respond(view=embed, ephemeral=True)
 
 def setup(bot):
-    bot.add_cog(SetMemberRole(bot))
+    bot.add_cog(SetServerVerification(bot))

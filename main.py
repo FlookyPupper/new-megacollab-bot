@@ -58,7 +58,7 @@ for file in Path("cogs").rglob("*.py"):
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
-    await bot.sync_commands()
+    #await bot.sync_commands()
     logger.info("Commands synced")
     await sync_server_to_database(bot, args)
 

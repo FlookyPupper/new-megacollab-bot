@@ -600,7 +600,7 @@ async def showfriendlysongnames(songs: list) -> list[discord.OptionChoice]:
 
     return list_of_songs
 
-async def showfriendlycollabnames(collabs: list) -> dict:
+async def showfriendlycollabnames(collabs: list) -> list[discord.OptionChoice]:
     list_of_collabs = []
 
     for row in collabs:
@@ -632,6 +632,11 @@ async def showfriendlyartistnames(collabs: list) -> dict:
         )
 
     return list_of_artists
+
+async def showfriendlydifficulties(difficulties: list) -> list[discord.OptionChoice]:
+    list_of_difficulties = []
+    for row in difficulties:
+        return
 
 async def showfriendlyparts(parts: list) -> dict:
     list_of_parts = []

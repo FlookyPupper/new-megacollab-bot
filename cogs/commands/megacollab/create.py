@@ -13,6 +13,18 @@ from typing import Optional
 from config.groups import CSV_MAXSIZE
 from utils.parseintodict import parseintodict
 from pycord.multicog import subcommand
+import logging
+from utils.dbcommands import (
+    db_checkduplicates,
+    db_showsong,
+    showfriendlysongnames
+)
+import csv
+import io
+from datetime import datetime, timedelta
+from views.selectlist import SelectList
+from views.confirmdeny import ConfirmDeny
+from utils.timeparser import parse_seconds_to_time
 
 class CreateMegacollab(commands.Cog):   
     def __init__(self, bot):
@@ -25,6 +37,7 @@ class CreateMegacollab(commands.Cog):
     )
     @discord.default_permissions(manage_guild=True)
     async def createmegacollab(
+        self,
         ctx, 
         name: str = discord.Option(
             str,
@@ -73,7 +86,7 @@ class CreateMegacollab(commands.Cog):
             return
 
         else:    
-            duplicates = await db_checkduplicates(name, 'megacollabs')
+            duplicates = await db_checkduplicates(self.bot, ctx.interaction.guild, name, 'megacollabs')
 
             if parts is not None:
                 required_columns = ["partnumber", "offsetstart", "offsetend", "rating"]
@@ -153,13 +166,14 @@ class CreateMegacollab(commands.Cog):
                         view=embed,
                         ephemeral=True
                     )
+                    raise Exception(e)
                     return
             else:
                 parts_dict = None
 
             try:
                 song = int(song)
-                songtoadd = await db_showsong(bysongid=song)
+                songtoadd = await db_showsong(self.bot, ctx.interaction.guild, bysongid=song)
                 friendlyname = list(await showfriendlysongnames(songtoadd))[0]
             except ValueError:
                 embed = Message(self.bot, title="Error", text="You inserted an invalid song, please use one from the dropdown list.", messagetype="Error")
@@ -179,11 +193,14 @@ class CreateMegacollab(commands.Cog):
                 f"**Host**: {ctx.interaction.user.mention}",
                 "-# You can add other hosts later",
             ])
+
+            total_duration = parts_dict[-1]['offsetendseconds'] - parts_dict[0]['offsetstartseconds']
+            text += f"\n**Parts**: Loaded {len(parts_dict)} parts, totaling {await parse_seconds_to_time(total_duration)}"
             
             view = ConfirmDeny(
                 self.bot,
                 title="You're about to create the following megacollab",
-                subittle="Review your changes before proceeding.",
+                subtitle="Review your changes before proceeding.",
                 text=text
             )
 
