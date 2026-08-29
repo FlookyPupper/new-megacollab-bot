@@ -808,3 +808,33 @@ async def db_showartists(bot, guild: discord.Guild, byartistid: int=None, byarti
         )
         
     return info
+
+async def db_showdifficulties(bot, query=None):
+    async with bot.db.acquire() as conn:
+        info = await conn.fetch(
+            'SELECT * FROM "Core".showdifficulties($1)', 
+            query
+        )
+    
+    return info
+
+async def showfriendlydifficultynames(difficulties: list) -> list[discord.OptionChoice]:
+    list_of_difficulties = []
+
+    for row in difficulties:
+        label = f"{row['difficulty']}"
+
+        if row['difficulty'] == "Demon":
+            label = f"{row['demondifficulty']} {label}"
+
+        label += f" {row['stars']}⭐"
+
+        #list_of_songs[label] = str(row['songid'])
+        list_of_difficulties.append(
+            discord.OptionChoice(
+                name=label,
+                value=str(row['difficultyid'])
+            )
+        )
+
+    return list_of_difficulties

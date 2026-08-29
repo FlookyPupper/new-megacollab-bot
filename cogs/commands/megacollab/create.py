@@ -9,6 +9,7 @@ from config.groups import megacollab
 import discord
 import pandas as pd
 from autocomplete.songs import song_autocomplete
+from autocomplete.difficulty import difficulty_autocomplete
 from typing import Optional
 from config.groups import CSV_MAXSIZE
 from utils.parseintodict import parseintodict
@@ -17,7 +18,8 @@ import logging
 from utils.dbcommands import (
     db_checkduplicates,
     db_showsong,
-    showfriendlysongnames
+    showfriendlysongnames,
+    showfriendlydifficultynames
 )
 import csv
 import io
@@ -59,6 +61,7 @@ class CreateMegacollab(commands.Cog):
         difficulty: int = discord.Option(
             int,
             description="Sets the difficulty for this megacollab.",
+            autocomplete=discord.utils.basic_autocomplete(difficulty_autocomplete),
             min_value=1,
             required=True
         ),
