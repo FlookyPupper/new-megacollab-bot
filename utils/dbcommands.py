@@ -53,7 +53,7 @@ async def db_createmegacollab(
         'SELECT "Core".createmegacollab($1, $2, $3, $4, $5, $6, $7, $8, $9)', 
         name, guild.id, songid, durationindays, difficultyid, maxgroups, seasontokensrequired, customstartdate, acknowledgeduplication
     )
-            
+
     return collabid
 
 async def db_addpartsubmission(
@@ -81,13 +81,14 @@ async def db_addpart(
     conn,
     newpartid: int, # this is int2 in the procedure and in the table
     collabid: int, # this is int4 in the procedure and in the table
+    guildid: int, 
     offsetstart: int, # this is numeric in the procedure and in the table 
     offsetend: int, # this is numeric in the procedure and in the table
     rating: int # this is between 1 and 5
 ):
     await conn.execute(
-        'CALL "Core".addpart($1, $2, $3, $4, $5)', 
-        newpartid, collabid, offsetstart, offsetend, rating
+        'CALL "Core".addpart($1, $2, $3, $4, $5, $6)', 
+        newpartid, collabid, guildid, offsetstart, offsetend, rating
         )
 
 async def db_addsonglink(

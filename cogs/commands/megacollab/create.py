@@ -19,7 +19,10 @@ from utils.dbcommands import (
     db_checkduplicates,
     db_showsong,
     showfriendlysongnames,
-    showfriendlydifficultynames
+    showfriendlydifficultynames,
+    db_createmegacollab,
+    db_associatehostwithcollab,
+    db_addpart
 )
 import csv
 import io
@@ -76,6 +79,12 @@ class CreateMegacollab(commands.Cog):
             min_value=500,
             max_value=10000,
             default=500,
+            required=False
+        ),
+        elorequired: Optional[int] = discord.Option(
+            int,
+            description="(Optional) Sets the minimum ELO required to join this collab.",
+            default=0,
             required=False
         )
     ):
@@ -226,6 +235,57 @@ class CreateMegacollab(commands.Cog):
                     view=duplicateview if duplicateview else view,
                     ephemeral=True
                 )
+            
+            if duplicateview:
+                await duplicateview.wait()
+            
+            await view.wait()
+
+            try:
+                if not view.choice:
+                    embed = Message(self.bot, title="Cancelled", text="Action cancelled.", messagetype="Error")
+                
+                elif view.choice:
+                    embed = Message(self.bot, title="Hold on, working now!", text=f"Creating megacollab {name}...", messagetype="Wait")
+                    await ctx.edit(
+                        view=embed
+                    )
+                    async with self.bot.db.acquire() as conn:
+                        async with conn.transaction():
+                            collabid = await db_createmegacollab(conn, ctx.interaction.guild, name, song, durationindays, difficulty, seasontokensrequired=elorequired, maxgroups=maxgroups, acknowledgeduplication=True)
+
+                            collabid = int(collabid)
+
+                            await db_associatehostwithcollab(conn, ctx.interaction.guild.id, ctx.interaction.user.id, collabid)
+
+                            if parts is None:
+                                # no parts to add
+                                ...
+
+                            elif not isinstance(parts_dict, list):
+                                raise TypeError("Parts is not a list.")
+
+                            else:
+                                for row in parts_dict:
+                                    await db_addpart(
+                                        conn,
+                                        row["partnumber"],
+                                        collabid,
+                                        ctx.interaction.guild.id,
+                                        row["offsetstartseconds"],
+                                        row["offsetendseconds"],
+                                        row["rating"]
+                                    )
+
+                            embed = Message(self.bot, title="Success", text=f"Successfully created megacollab {name}!", messagetype="Success")
+            except Exception as e:
+                embed = Message(self.bot, title="An error occurred", subtitle=f"An error occurred while creating this megacollab.", text=f"{e}", messagetype="Error")
+                raise
+
+            finally:
+                await ctx.edit(
+                    view=embed
+                ) 
 
 def setup(bot):
     bot.add_cog(CreateMegacollab(bot))
