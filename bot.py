@@ -9,6 +9,7 @@ class MyBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pool = None
+        self.isBotSynced = False
 
     async def start(self, *args, **kwargs):
         await create_pool(self)

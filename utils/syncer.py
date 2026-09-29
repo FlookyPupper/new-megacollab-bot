@@ -199,12 +199,13 @@ async def sync_server_to_database(bot, args):
                                         logger.info(f"Persistent message from {collab['collabname']} has reached edit limit, we are going to regenerate it")
                                         await regeneratemessage(messagetorefresh, messagetorefresh.channel, collab['collabid'], messagetype, view)
                     else:
-                        bot.add_view(
-                            SelectPartToClaim(
-                            collab['collabid'],
-                            await parseintodict(await db_showparts(collab['collabid']))
-                            )
-                        )
+                        #bot.add_view(
+                        #    SelectPartToClaim(
+                        #    collab['collabid'],
+                        #    await parseintodict(await db_showparts(collab['collabid']))
+                        #    )
+                        #)
+                        pass
                     logger.info(f'View of collab "{collab['collabname']}" edited successfully')
 
         text = "All views successfully"
@@ -224,3 +225,4 @@ async def sync_server_to_database(bot, args):
                 await db_deleterole(bot, conn, role['guildid'], role['roleid'], True)
 
     logger.info("Server synchronization process complete!")
+    bot.isBotSynced = True

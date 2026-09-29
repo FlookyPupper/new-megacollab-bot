@@ -88,7 +88,7 @@ class EnableRanks(commands.Cog):
                                 )
 
                                 if userseasontokens is not None:
-                                    correspondingrank = await db_showrank(bythreshold=userseasontokens, conn=conn)
+                                    correspondingrank = await db_showrank(self.bot, bythreshold=userseasontokens, conn=conn)
 
                                     rankrole_id = await conn.fetchval(
                                         'SELECT roleid from "Junctions".ranksxdiscordroles where rankname = $1 and guildid = $2',
@@ -111,7 +111,7 @@ class EnableRanks(commands.Cog):
             else:
                 embed = Message(self.bot, title="Incompatible Icy version", text=f"Your database is not compatible with this command. This command requires version {required['VERSION_STRING']} to function.", messagetype="Error")
         except Exception as e:
-            embed = Message(self.bot, title="An error occurred", subtitle=f"An error occurred while {verb}ing ranks for this guild.", text=f"{e}", messagetype="Error")
+            embed = Message(self.bot, title="An error occurred", subtitle=f"An error occurred while {verb}ling ranks for this guild.", text=f"{e}", messagetype="Error")
 
         finally:
             await ctx.respond(view=embed, ephemeral=True)
