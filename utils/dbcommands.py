@@ -1,6 +1,8 @@
 import asyncpg
 import discord
 from utils.parseintodict import parseintodict
+from utils.timeparser import (parse_time_to_seconds, parse_seconds_to_time)
+from pathlib import Path
 
 async def db_associatehostwithcollab(
     conn,
@@ -364,11 +366,11 @@ async def db_showidol(bot, guild: discord.Guild) -> list[dict]:
     
     return new_dict
 
-async def db_showcollabs(bot, bycollabid: int=None, bycollabname: str=None):
+async def db_showcollabs(bot, guild, bycollabid: int=None, bycollabname: str=None):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showcollabs($1, $2)', 
-            bycollabid, bycollabname
+            'SELECT * from "Core".showcollabs($1, $2, $3)', 
+            guild.id, bycollabid, bycollabname
         )
         
     return info
@@ -668,6 +670,7 @@ async def getschemaversion(bot) -> dict:
     return schemaversion
 
 async def db_showsong(bot, guild, bysongid=None, byartistid=None, byname=None):
+    print(f"Bot: {bot}\nGuild: {guild.id}\nSongID: {bysongid}\nArtistID: {byartistid}\nName: {byname}")
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
             'SELECT * from "Core".showsong($1, $2, $3, $4)', 
@@ -839,3 +842,227 @@ async def showfriendlydifficultynames(difficulties: list) -> list[discord.Option
         )
 
     return list_of_difficulties
+
+async def pulllocalsong(bot, guild, collabid: int):
+    pull_collab = await db_showcollabs(bot, guild, bycollabid=int(collabid))
+    collab_dict = await parseintodict(pull_collab)
+    pull_song = await db_showsong(bot, guild, bysongid=collab_dict[0]['songid'])
+    song_dict = await parseintodict(pull_song)
+
+    path = Path(song_dict[0]['storagelocation'])
+    
+    if path is None:
+        file = None
+    elif path.exists():
+        file = discord.File(path, filename=f"{song_dict[0]['replacementid']}.mp3")
+    else:
+        raise FileNotFoundError("File doesn't exist")
+
+    return file
+
+async def showtext(bot, guild, collabid: int, texttoshow: str, mentions: bool, filename: str=None):
+    pull_collab = await db_showcollabs(bot, guild, bycollabid=int(collabid))
+    record = await db_showparts(bot, int(collabid))
+    claim_record = await db_showclaims(bot, bycollabid=int(collabid))
+        
+    parts_dict, collab_dict, claim_dict = await parseintodict(record), await parseintodict(pull_collab), await parseintodict(claim_record)
+
+    text = ""
+        
+    if len(parts_dict) != len(claim_dict):
+        raise ValueError("no")
+
+    lines = []
+
+    if texttoshow == "Claims":
+        groups = 500
+        totalparts = len(parts_dict)
+
+        total_part_groups = int(groups / totalparts)
+
+        for row, row2 in zip(parts_dict, claim_dict):
+            if row2['userid'] is None:
+                user = f"*Unclaimed*"
+            else:
+                if mentions:
+                    user = f"<@{row2['userid']}>"
+                else:
+                    user = f"{row2['userid']}"
+
+            partdurationinseconds = int(row['offsetendseconds']) - int(row['offsetstartseconds'])
+
+            partdefinitiontext = f"**Part {row['partnumber']}** - {user}"
+
+            if row2['status'] == 'Pending':
+                lines.append(f"## {partdefinitiontext}")
+                lines.append("🗒️ **Pending Review**")
+
+            elif row2['status'] == 'Finished':
+                lines.append(f"## ~~{partdefinitiontext}~~")
+                lines.append("✅ **Finished**")
+
+            else:
+                lines.append(f"## {partdefinitiontext}")
+
+                offsettext = f"{row['offsetstartseconds']} - {row['offsetendseconds']}\n({await parse_seconds_to_time(row['offsetstartseconds'])} - {await parse_seconds_to_time(row['offsetendseconds'])})"
+
+                if partdurationinseconds >= 15:
+                    offsettext += f"\n**(Long Part)**"
+
+                lines.append(offsettext)
+
+                if row['partnumber'] == 1:
+                    initialgroups = 4
+                    limitgroups = total_part_groups
+                else:
+                    initialgroups = total_part_groups * (row['partnumber'] - 1) + 1
+                    limitgroups = total_part_groups * row['partnumber']
+
+                group_text = f"**Groups/Colours**: {initialgroups} - {limitgroups}"
+
+                lines.append(group_text)
+
+                stars = f"**{row['rating']}**⭐"
+
+                rating_text = f"{stars} "
+
+                # Rating description
+                if row['rating'] <= 2:
+                    rating_text += "- *Boring Part*"
+                elif row['rating'] == 3:
+                    rating_text += "- *Neutral*"
+                else:
+                    rating_text += "- *Expressive Part*"
+
+                lines.append(rating_text)
+
+            lines.append("")  # extra newline
+
+    elif texttoshow == "Info":
+        lines.append(f"# {collab_dict[0]['collabname']}")
+
+        totaldurationinseconds = parts_dict[-1]['offsetendseconds'] - parts_dict[0]['offsetstartseconds']
+
+        totaldurationintime = await parse_seconds_to_time(totaldurationinseconds)
+
+        duration_text = f"**Duration**: {totaldurationintime} "
+
+        theme_text = f"**Theme**: {collab_dict[0]['category']}"
+
+        prefix = ""
+        if (
+            collab_dict[0]["demondifficulty"] is not None
+            and collab_dict[0]["difficulty"] == "Demon"
+            and collab_dict[0]["stars"] == 10
+        ):
+            prefix = collab_dict[0]["demondifficulty"] + " "
+
+        difficulty_conc = f"{prefix}{collab_dict[0]['difficulty']} **{collab_dict[0]['stars']}**⭐"
+
+        difficulty_text = f"**Difficulty**: {difficulty_conc}"
+        
+        if totaldurationinseconds in range(0, 9):
+            geometrydashlength = "Tiny"
+        elif totaldurationinseconds in range(10, 29):
+            geometrydashlength = "Short"
+        elif totaldurationinseconds in range(30, 59):
+            geometrydashlength = "Medium"
+        elif totaldurationinseconds in range(60, 119):
+            geometrydashlength = "Long"
+        else:
+            geometrydashlength = "XL"
+
+        duration_text += f"*({geometrydashlength})*"
+
+        lines.append(duration_text)
+
+        lines.append(difficulty_text)
+
+        lines.append(theme_text)
+
+        song = await db_showsong(bot, guild, bysongid=collab_dict[0]['songid'])
+
+        print(song)
+
+        song_dict = await parseintodict(song)
+
+        if song_dict[0]['newgroundslink'] is not None:
+            linktoshow = f"{song_dict[0]['newgroundslink']}"
+        elif song_dict[0]['youtubelink'] is not None:
+            linktoshow = f"{song_dict[0]['youtubelink']}"
+        elif song_dict[0]['bandcamplink'] is not None:
+            linktoshow = f"{song_dict[0]['bandcamplink']}"
+        elif song_dict[0]['soundcloudlink'] is not None:
+            linktoshow = f"{song_dict[0]['soundcloudlink']}"
+        else:
+            linktoshow = None
+
+        lines.append("")        
+        
+        songname = f'🎵 {f"[{song_dict[0]['songname']}]({linktoshow})" if linktoshow is not None else f"{song_dict[0]['songname']}"}'
+        songname += f" by {await concatenateartists(song_dict[0]['artistname'])} {"***(NONG)***" if song_dict[0]['isnong'] else ""}"
+
+        lines.append(songname)  
+
+        replacementid_text = f"**Replacement ID**: {song_dict[0]['replacementid']}"
+
+        if filename is not None and song_dict[0]['replacementid'] is not None:
+            if not filename.isdigit() or int(filename) != song_dict[0]['replacementid']:
+                lines.append(replacementid_text)
+     
+
+        lines.append("")  # extra newline
+
+        timetext = f"**Deadline**: <t:{int(collab_dict[0]['finishdate'].timestamp())}:f>"
+
+        lines.append(timetext)
+
+    elif texttoshow == "GroupInfo":
+        group_info = f"# Reserved Colours and Groups\n"
+
+        group_info += f"**Colour 1** - Black\n"
+        group_info += f"**Colour 2** - White\n"
+        group_info += f"**Group 1** - Alpha 0\n"
+        group_info += f"**Group 2** - Alpha 0.5\n"
+        group_info += f"**Group 3** - Follow Player Y\n"
+        
+        lines.append(group_info)
+
+    elif texttoshow == "Backups":
+        lines.append("# Backups")
+
+        backup_list = []
+
+        for row, row2 in zip(parts_dict, claim_dict):
+            part_text = f"- **Part {row['partnumber']}** - "   
+            if row2['backups'] is not None:
+                if mentions:
+                    backup_text = f"{" ".join(f"<@{b}>" for b in row2['backups'])}\n"
+                else:
+                    backup_text = f"{" ".join(f"{b}" for b in row2['backups'])}\n"
+                if len(backup_text.strip()) >= 1:
+                    part_text += backup_text
+                    backup_list.append(part_text)
+
+        if len(backup_list) >= 1:
+            lines.extend(backup_list)
+        else:
+            lines.append("*None yet*")
+
+
+    elif texttoshow == "Prizes":
+        lines.append("# Prizes")
+        lines.append(f"Prizes will be awarded to the three best parts of {collab_dict[0]['collabname']}:")
+        lines.append(f"- 🥇 **1st Place** - Discord Nitro *(1 month)*")
+        lines.append(f"- 🥈 **2nd Place** - Discord Nitro Basic *(1 month)*")
+        lines.append(f"- 🥉 **3rd Place** - A pat on the back")
+        
+        
+        
+    
+    elif texttoshow == "GroupInfo":
+        lines.append("Group Info WIP")
+
+    text = "\n".join(lines)
+
+    return text

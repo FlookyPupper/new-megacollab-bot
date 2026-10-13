@@ -100,13 +100,16 @@ async def sync_server_to_database(bot, args):
                             guild.id
                         )
 
-                        idolrole = guild.get_role(idolrole_id)
+                        if idolrole_id is not None:
+                            idolrole = guild.get_role(idolrole_id)
 
-                        if idol is not None and idolrole not in idol.roles:
-                            for member in idolrole.members:
-                                await member.remove_roles(idolrole, reason="Bot startup")
+                            if idol is not None and idolrole not in idol.roles:
+                                for member in idolrole.members:
+                                    await member.remove_roles(idolrole, reason="Bot startup")
             
-                            await idol.add_roles(idolrole)
+                                await idol.add_roles(idolrole)
+                        else:
+                            logger.warning("There is no idol role")
 
                         userseasontokens = await conn.fetchval(
                             'select seasontokens from "Core".users where guildid = $1 and userid = $2',
@@ -152,7 +155,7 @@ async def sync_server_to_database(bot, args):
             logger.warning("(You have launched Bracelety with the --refresh-views argument, which will proactively change the code of persistent views that already exist.)")
             logger.warning("(You should only use this option if you changed the source code for any of the persistent views.)")
             messagetypes = await db_showallmessagetypes()
-        collabs = await db_showcollabs(bot)
+        collabs = await db_showcollabs(bot, guild)
         try:
             collabs = await parseintodict(collabs)
         except ValueError:
