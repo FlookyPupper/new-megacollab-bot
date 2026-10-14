@@ -752,6 +752,7 @@ async def db_showclaims(bot, guild, bycollabid: Optional[int]=None, bypartid: Op
 
 async def db_showuserclaims(
     bot,
+    guild, 
     bycollabid: Optional[int]=None, 
     bypartid: Optional[int]=None, 
     byuserid: Optional[int]=None, 
@@ -761,8 +762,8 @@ async def db_showuserclaims(
 ):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showuserclaims($1, $2, $3, $4, $5, $6)', 
-            bycollabid, bypartid, byuserid, byclaimid, bystatus, bytype
+            'SELECT * from "Core".showuserclaims($1, $2, $3, $4, $5, $6, $7)', 
+            guild.id, bycollabid, bypartid, byuserid, byclaimid, bystatus, bytype
         )
     
     return info

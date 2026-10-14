@@ -4,7 +4,7 @@ from utils.parseintodict import parseintodict
 
 class ConfirmPartSelect(discord.ui.View):
 
-    def __init__(self, collabid: int, collabname: str, partid: int, backup: bool, lock_registry: set[int]):
+    def __init__(self, collabid: int, collabname: str, partid: int, backup: bool, lock_registry: set[int], bot):
         super().__init__(timeout=120)
         self.confirm = None
         self.collabid = collabid
@@ -12,6 +12,7 @@ class ConfirmPartSelect(discord.ui.View):
         self.partid = partid
         self.isbackup = backup
         self.lock_registry = lock_registry
+        self.bot = bot
 
     async def on_timeout(self):
         self.lock_registry.discard(ctx.user.id)
@@ -28,7 +29,7 @@ class ConfirmPartSelect(discord.ui.View):
         useridtolock = ctx.user.id
 
         try:
-            async with client.db.acquire() as conn:
+            async with self.bot.db.acquire() as conn:
                 await db_claimpart(conn, ctx.guild.id, ctx.user.id, self.collabid, self.partid)
         except Exception as e:
             embed = discord.Embed(title=f"❌ An error occurred while claiming the part: {e}", color=0xff0000)
@@ -151,6 +152,7 @@ class PartSelect(discord.ui.Select):
             embed.title = title
 
             view = ConfirmPartSelect(
+                bot=self.bot,
                 collabid=collabid, 
                 collabname=collab_dict[0]['collabname'], 
                 partid=partclaim[0]['partid'], 
@@ -335,7 +337,7 @@ class SelectPartToClaim(discord.ui.View):
 
             collab_dict = await parseintodict(await db_showcollabs(self.bot, self.guild, bycollabid=collabid))
             try:
-                active_claims = await parseintodict(await db_showuserclaims(self.bot, bycollabid=collabid, byuserid=ctx.user.id, bystatus="Active"))
+                active_claims = await parseintodict(await db_showuserclaims(self.bot, self.guild, bycollabid=collabid, byuserid=ctx.user.id, bystatus="Active"))
             except ValueError as e:
                 active_claims = []
 
