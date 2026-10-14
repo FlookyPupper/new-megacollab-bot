@@ -186,13 +186,13 @@ async def db_addandsettype(
             )
         case discord.Message():               
             await conn.execute(
-                'SELECT "Core".setmessagetype($1, $2, $3, $4)', 
-                collabid, typetoset, int(objecttoadd.id), int(objecttoadd.channel.id)
+                'SELECT "Core".setmessagetype($1, $2, $3, $4, $5)', 
+                collabid, typetoset, int(objecttoadd.id), int(objecttoadd.channel.id), int(objecttoadd.guild.id)
             )
         case discord.TextChannel():
             await conn.execute(
-                'SELECT "Core".setchanneltype($1, $2, $3)', 
-                collabid, typetoset, int(objecttoadd.id)
+                'SELECT "Core".setchanneltype($1, $2, $3, $4)', 
+                collabid, typetoset, int(objecttoadd.id), int(objecttoadd.guild.id)
             )
 
 async def getschemaversion(bot) -> dict:
@@ -380,7 +380,7 @@ async def db_showartistname(bot, guild, artistid: int):
     query = await parseintodict(query)
     return query[0]['artistname']
 
-async def pullcollabrole(conn, collabid: int, type: str) -> discord.Role:
+async def pullcollabrole(conn, bot, collabid: int, type: str) -> discord.Role:
     info = await conn.fetchrow(
         'SELECT * from "Core".showrole($1, $2)',
         collabid, type
@@ -730,22 +730,22 @@ async def db_checkduplicates(bot, guild: discord.Guild, name: str, table: str):
 
     return info
 
-async def db_showparts(bot, collabid: int):
+async def db_showparts(bot, guild, collabid: int):
     collabid = int(collabid)
 
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showparts($1)', 
-            collabid
+            'SELECT * from "Core".showparts($1, $2)', 
+            collabid, guild.id
         )
     
     return info
 
-async def db_showclaims(bot, bycollabid: Optional[int]=None, bypartid: Optional[int]=None, byuserid: Optional[int]=None):
+async def db_showclaims(bot, guild, bycollabid: Optional[int]=None, bypartid: Optional[int]=None, byuserid: Optional[int]=None):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
-            'SELECT * from "Core".showclaims($1, $2, $3)', 
-            bycollabid, bypartid, byuserid
+            'SELECT * from "Core".showclaims($1, $2, $3, $4)', 
+            guild.id, bycollabid, bypartid, byuserid
         )
     
     return info
@@ -862,8 +862,8 @@ async def pulllocalsong(bot, guild, collabid: int):
 
 async def showtext(bot, guild, collabid: int, texttoshow: str, mentions: bool, filename: str=None):
     pull_collab = await db_showcollabs(bot, guild, bycollabid=int(collabid))
-    record = await db_showparts(bot, int(collabid))
-    claim_record = await db_showclaims(bot, bycollabid=int(collabid))
+    record = await db_showparts(bot, guild, int(collabid))
+    claim_record = await db_showclaims(bot, guild, bycollabid=int(collabid))
         
     parts_dict, collab_dict, claim_dict = await parseintodict(record), await parseintodict(pull_collab), await parseintodict(claim_record)
 

@@ -3,6 +3,7 @@ from utils.icylogger import logger
 from utils.parseintodict import parseintodict
 import asyncpg
 import argparse
+from views.legacy.parts import (SelectPartToClaim, PartSelect)
 
 async def sync_server_to_database(bot, args):
     list_of_members = []
@@ -202,13 +203,14 @@ async def sync_server_to_database(bot, args):
                                         logger.info(f"Persistent message from {collab['collabname']} has reached edit limit, we are going to regenerate it")
                                         await regeneratemessage(messagetorefresh, messagetorefresh.channel, collab['collabid'], messagetype, view)
                     else:
-                        #bot.add_view(
-                        #    SelectPartToClaim(
-                        #    collab['collabid'],
-                        #    await parseintodict(await db_showparts(collab['collabid']))
-                        #    )
-                        #)
-                        pass
+                        bot.add_view(
+                            SelectPartToClaim(
+                            collab['collabid'],
+                            await parseintodict(await db_showparts(bot, guild, collab['collabid'])),
+                            bot,
+                            guild
+                            )
+                        )
                     logger.info(f'View of collab "{collab['collabname']}" edited successfully')
 
         text = "All views successfully"
