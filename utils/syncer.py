@@ -155,7 +155,7 @@ async def sync_server_to_database(bot, args):
         if args.refresh_views:
             logger.warning("(You have launched Bracelety with the --refresh-views argument, which will proactively change the code of persistent views that already exist.)")
             logger.warning("(You should only use this option if you changed the source code for any of the persistent views.)")
-            messagetypes = await db_showallmessagetypes()
+            messagetypes = await db_showallmessagetypes(bot)
         collabs = await db_showcollabs(bot, guild)
         try:
             collabs = await parseintodict(collabs)

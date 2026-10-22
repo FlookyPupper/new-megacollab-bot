@@ -380,10 +380,10 @@ async def db_showartistname(bot, guild, artistid: int):
     query = await parseintodict(query)
     return query[0]['artistname']
 
-async def pullcollabrole(conn, bot, collabid: int, type: str) -> discord.Role:
+async def pullcollabrole(conn, bot, collabid: int, guild: discord.Guild, type: str) -> discord.Role:
     info = await conn.fetchrow(
-        'SELECT * from "Core".showrole($1, $2)',
-        collabid, type
+        'SELECT * from "Core".showrole($1, $2, $3)',
+        collabid, guild if isinstance(guild, int) else guild.id, type
     )
     
     guild = bot.get_guild(info['guildid'])
@@ -432,10 +432,10 @@ async def db_showallmessagetypes(bot) -> list[str]:
 
     return types
 
-async def pullcollabmessage(bot, conn, collabid: int, type: str) -> discord.Message:
+async def pullcollabmessage(bot, conn, collabid: int, guild: discord.Guild, type: str) -> discord.Message:
     info = await conn.fetchrow(
-        'SELECT * from "Core".showmessage($1, $2)',
-        collabid, type
+        'SELECT * from "Core".showmessage($1, $2, $3)',
+        collabid, guild if isinstance(guild, int) else guild.id, type
     )
 
     if info is None:
@@ -446,10 +446,10 @@ async def pullcollabmessage(bot, conn, collabid: int, type: str) -> discord.Mess
 
     return message
 
-async def pullcollabchannel(bot, conn, collabid: int, type: str) -> discord.TextChannel:
+async def pullcollabchannel(bot, conn, collabid: int, guild: discord.Guild, type: str) -> discord.TextChannel:
     info = await conn.fetchval(
-        'SELECT "Core".showchannel($1, $2)',
-        collabid, type
+        'SELECT "Core".showchannel($1, $2, $3)',
+        collabid, guild if isinstance(guild, int) else guild.id, type
     )
 
     if info is None:

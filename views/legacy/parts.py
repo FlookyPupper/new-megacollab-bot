@@ -349,7 +349,7 @@ class SelectPartToClaim(discord.ui.View):
                     dropdown = ChoosePartToDrop(claims=active_claims, lock_registry=SelectPartToClaim._used_by)
                     embed = discord.Embed(title=f"Choose the part you want to drop", color=0x00ff00)
 
-                    await ctx.send_followup(
+                    await ctx.followup.send(
                         ephemeral=True,
                         embed=embed,
                         view=dropdown
@@ -405,12 +405,14 @@ class SelectPartToClaim(discord.ui.View):
                 return
             elif chosen:
                 if view is not None:
-                    await ctx.edit_original_response(
+                    await ctx.followup.send(
+                        ephemeral=True,
                         embed=embed,
                         view=view
                     )
                 else:
-                    await ctx.edit_original_response(
+                    await ctx.followup.send(
+                        ephemeral=True,
                         embed=embed
                     )
             else:

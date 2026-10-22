@@ -172,7 +172,7 @@ class DbNotify(commands.Cog):
 
                     user = await self.bot.fetch_user(userclaim[0]['userid'])
 
-                    inboxchannel = await pullcollabchannel(self.bot, conn, collabid=collabid, type="Inbox")
+                    inboxchannel = await pullcollabchannel(self.bot, conn, collabid=collabid, guild=int(data["gid"]), type="Inbox")
 
                     text = f"**Part {userclaim[0]['partid']}** submission by {user.mention}"
 
@@ -206,7 +206,7 @@ class DbNotify(commands.Cog):
                         messagetype = "Claims"
                 
                     text = await showtext(self.bot, data["gid"], collabid=int(data["cid"]), texttoshow=messagetype, mentions=True)
-                    message = await pullcollabmessage(self.bot, conn, collabid=int(data["cid"]), type=messagetype)
+                    message = await pullcollabmessage(self.bot, conn, collabid=int(data["cid"]), guild=int(data["gid"]), type=messagetype)
 
                     try:
                         await message.edit(content=text)
@@ -214,18 +214,18 @@ class DbNotify(commands.Cog):
                         if e.code == 30046:
                             await regeneratemessage(conn, message, message.channel, data["cid"], messagetype, message.view)
                             if messagetype == "Claims":
-                                backup_message = await pullcollabmessage(self.bot, conn, collabid=int(data["cid"]), type="Backups")
+                                backup_message = await pullcollabmessage(self.bot, conn, collabid=int(data["cid"]), guild=int(data["gid"]), type="Backups")
                                 await regeneratemessage(conn, backup_message, backup_message.channel, data["cid"], "Backups", backup_message.view)
 
-                    notifychannel = await pullcollabchannel(self.bot, conn, collabid=int(data["cid"]), type="Announcements")
-                    notifyrole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), type="Notify")
+                    notifychannel = await pullcollabchannel(self.bot, conn, collabid=int(data["cid"]), guild=int(data["gid"]), type="Announcements")
+                    notifyrole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), guild=int(data["gid"]), type="Notify")
 
                     guild = notifychannel.guild
 
                     user = guild.get_member(data['uid'])
 
-                    backuprole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), type="Backup")
-                    memberrole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), type="Member")
+                    backuprole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), guild=int(data["gid"]), type="Backup")
+                    memberrole = await pullcollabrole(conn, self.bot, collabid=int(data['cid']), guild=int(data["gid"]), type="Member")
                 
                     if data['pc'] == 0:
                         if memberrole in user.roles:
