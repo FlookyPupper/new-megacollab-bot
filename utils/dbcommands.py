@@ -418,7 +418,7 @@ async def showallroles(bot, conn, exceptcollab: bool=False) -> discord.Role:
    
     return roles
 
-async def db_deleterole(conn, guildid: int, roleid: int, exceptcollab: bool=False) -> discord.Role:
+async def db_deleterole(bot, conn, guildid: int, roleid: int, exceptcollab: bool=False) -> discord.Role:
     info = await conn.fetch(
         'SELECT * from "Core".deleterole($1, $2, $3)',
         guildid, roleid, exceptcollab
