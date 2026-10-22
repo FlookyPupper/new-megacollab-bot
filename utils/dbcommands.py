@@ -370,7 +370,7 @@ async def db_showcollabs(bot, guild, bycollabid: int=None, bycollabname: str=Non
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
             'SELECT * from "Core".showcollabs($1, $2, $3)', 
-            guild.id, bycollabid, bycollabname
+            guild.id if not isinstance(guild, int) else guild, bycollabid, bycollabname
         )
         
     return info
@@ -432,7 +432,7 @@ async def db_showallmessagetypes(bot) -> list[str]:
 
     return types
 
-async def pullcollabmessage(conn, collabid: int, type: str) -> discord.Message:
+async def pullcollabmessage(bot, conn, collabid: int, type: str) -> discord.Message:
     info = await conn.fetchrow(
         'SELECT * from "Core".showmessage($1, $2)',
         collabid, type
@@ -446,7 +446,7 @@ async def pullcollabmessage(conn, collabid: int, type: str) -> discord.Message:
 
     return message
 
-async def pullcollabchannel(conn, collabid: int, type: str) -> discord.TextChannel:
+async def pullcollabchannel(bot, conn, collabid: int, type: str) -> discord.TextChannel:
     info = await conn.fetchval(
         'SELECT "Core".showchannel($1, $2)',
         collabid, type
@@ -736,7 +736,7 @@ async def db_showparts(bot, guild, collabid: int):
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
             'SELECT * from "Core".showparts($1, $2)', 
-            collabid, guild.id
+            collabid, guild.id if not isinstance(guild, int) else guild
         )
     
     return info
@@ -745,7 +745,7 @@ async def db_showclaims(bot, guild, bycollabid: Optional[int]=None, bypartid: Op
     async with bot.db.acquire() as conn:
         info = await conn.fetch(
             'SELECT * from "Core".showclaims($1, $2, $3, $4)', 
-            guild.id, bycollabid, bypartid, byuserid
+            guild.id if not isinstance(guild, int) else guild, bycollabid, bypartid, byuserid
         )
     
     return info

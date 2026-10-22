@@ -1,5 +1,5 @@
 import discord
-from utils.dbcommands import (db_showclaims, db_showcollabs, db_showcollabidbymessage, pullcollabrole, db_showuserclaims)
+from utils.dbcommands import (db_showclaims, db_showcollabs, db_showcollabidbymessage, pullcollabrole, db_showuserclaims, db_claimpart, db_droppart)
 from utils.parseintodict import parseintodict
 
 class ConfirmPartSelect(discord.ui.View):
@@ -230,8 +230,9 @@ class ChoosePartToDrop(discord.ui.View):
         self.stop()
 
 class ConfirmDropPart(discord.ui.View):
-    def __init__(self, guildid: int, userid: int, collabname: str, parts: list, lock_registry: set[int]):
+    def __init__(self, guildid: int, userid: int, collabname: str, parts: list, lock_registry: set[int], bot):
         super().__init__(timeout=120)
+        self.bot = bot
         self.collabname = collabname
         self.parts = parts
         self.guildid = guildid
@@ -253,7 +254,7 @@ class ConfirmDropPart(discord.ui.View):
         useridtolock = ctx.user.id
 
         try:
-            async with client.db.acquire() as conn:
+            async with self.bot.db.acquire() as conn:
                 for part in self.parts:
                     await db_droppart(conn, self.guildid, self.userid, part['collabid'], part['partid'])
 
@@ -387,7 +388,8 @@ class SelectPartToClaim(discord.ui.View):
                         ctx.user.id, 
                         collab_dict[0]['collabname'], 
                         parts=parts_to_drop,
-                        lock_registry=SelectPartToClaim._used_by)
+                        lock_registry=SelectPartToClaim._used_by,
+                        bot=self.bot)
                 else:
                     embed = discord.Embed(title="❌ Cancelled")
                     view = None
